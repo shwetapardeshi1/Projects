@@ -11,53 +11,59 @@ loaded_model.load_weights("model.h5")
 
 
 def parse(path):
-	original = cv2.imread(path)
-	proc = cv2.GaussianBlur(original .copy(), (9, 9), 0)
-	proc = cv2.adaptiveThreshold(proc, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-	proc = cv2.bitwise_not(proc, proc)
+	image = cv2.imread(path)
+	ratio = image.shape[0] / 300.0
+	orig = image.copy()
+	image = imutils.resize(image, height = 300)
+	# convert the image to grayscale, blur it, and find edges
+	# in the image
+	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	gray = cv2.bilateralFilter(gray, 11, 17, 17)
+	edged = cv2.Canny(gray, 30, 200)
+	# find contours in the edged image, keep only the largest
+	# ones, and initialize our screen contour
+	cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	cnts = imutils.grab_contours(cnts)
+	cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+	screenCnt = None
 
-	if not skip_dilate:
-		kernel = np.array([[0., 1., 0.], [1., 1., 1.], [0., 1., 0.]],np.uint8)
-		proc = cv2.dilate(proc, kernel)
-    
-	contours, h = cv2.findContours(proc.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)   
-	contours = sorted(contours, key=cv2.contourArea, reverse=True)
-	polygon = contours[0]  
-	bottom_right, _ = max(enumerate([pt[0][0] + pt[0][1] for pt in polygon]), key=operator.itemgetter(1))
-	top_left, _ = min(enumerate([pt[0][0] + pt[0][1] for pt in polygon]), key=operator.itemgetter(1))
-	bottom_left, _ = min(enumerate([pt[0][0] - pt[0][1] for pt in polygon]), key=operator.itemgetter(1))
-	top_right, _ = max(enumerate([pt[0][0] - pt[0][1] for pt in polygon]), key=operator.itemgetter(1))
-	corners = [polygon[top_left][0], polygon[top_right][0], polygon[bottom_right][0], polygon[bottom_left][0]]
-    
-	top_left, top_right, bottom_right, bottom_left = corners[0], corners[1], corners[2], corners[3]
-	src = np.array([top_left, top_right, bottom_right, bottom_left], dtype='float32')
-    
-	dis1 = np.sqrt(((bottom_right[0] -top_right[0]) ** 2) + ((bottom_right[0] - top_right[0]) ** 2))
-	dis2 = np.sqrt(((bottom_left[0] -top_left[0]) ** 2) + ((bottom_left[0] - top_left[0]) ** 2))
-	dis3 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) + ((bottom_right[0] -  bottom_left[0]) ** 2))
-	dis4 = np.sqrt(((top_left[0] -top_right[0]) ** 2) + ((top_left[0] - top_right[0]) ** 2))
-    
-	side = max([ dis1, dis2, dis3, dis4])
+	largestContourArea = 0
+	largestContour = 0
+	for cnt in cnts:
+	contourArea = cv2.contourArea(cnt)
+	if( contourArea > largestContourArea):
+	    largestContour = cnt
+	    largestContourArea = contourArea
 
-	dst = np.array([[0, 0], [side - 1, 0], [side - 1, side - 1], [0, side - 1]], dtype='float32')
+	x,y,w,h = cv2.boundingRect(largestContour)
 
-	m = cv2.getPerspectiveTransform(src, dst)
-	cropped = cv2.warpPerspective(img, m, (int(side), int(side)))
-
+	cropped= image[y:y+h,x:x+w]
+	cv2.namedWindow("Largest Contour",cv2.WINDOW_NORMAL)
+	cv2.imshow("Largest Contour",ROI)
+	cv2.waitKey(0)
 	squares = []
 	side = cropped.shape[:1]
 	side = side[0] / 9
-
-	
 	for j in range(9):
-		for i in range(9):
-			p1 = (i * side, j * side)  
-			p2 = ((i + 1) * side, (j + 1) * side)  
-			squares.append((p1, p2))
-            
-	digits = get_digits(cropped, squares, 28)
+	for i in range(9):
+	    p1 = (i * side, j * side)  # Top left corner of a bounding box
+	    p2 = ((i + 1) * side, (j + 1) * side)  # Bottom right corner of bounding box
+	    squares.append((p1, p2))
+
+	digits = []
+
+	cropped= imutils.resize(cropped, height = 300)
+	gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+	gray = cv2.bilateralFilter(gray, 11, 17, 17)
+	edged = cv2.Canny(gray, 30, 200)
+
+	size = 28 
+	for square in squares:
+	digits.append(extract_digit(edged, square, size))
+
 	final_image = show_digits(digits)
 	return final_image
+
 
 def extract_sudoku(image_path):
     final_image = (image_path)
