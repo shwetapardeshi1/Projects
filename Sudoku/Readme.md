@@ -1,2 +1,2 @@
-Please find my blogpost of this project (here)[].
+Please find my blogpost of this project here.
 
