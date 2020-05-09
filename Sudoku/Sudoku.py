@@ -2,15 +2,15 @@ from utils import *
 from keras.models import model_from_json
 
 
-with open('models/model.json', 'r') as f:
+with open('model.json', 'r') as f:
     loaded_model_json = f.read()
 
 loaded_model = model_from_json(loaded_model_json)
-loaded_model.load_weights("models/model.h5")
+loaded_model.load_weights("model.h5")
 
 
 
-def parse_grid(path):
+def parse(path):
 	original = cv2.imread(path)
 	proc = cv2.GaussianBlur(original .copy(), (9, 9), 0)
 	proc = cv2.adaptiveThreshold(proc, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
@@ -60,7 +60,7 @@ def parse_grid(path):
 	return final_image
 
 def extract_sudoku(image_path):
-    final_image = parse_grid(image_path)
+    final_image = (image_path)
     return final_image
 
 
